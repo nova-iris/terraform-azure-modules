@@ -1,0 +1,434 @@
+name: CI - Validation, Linting & Security
+
+on:
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - '**/*.tf'
+      - '**/*.tfvars*'
+      - '.github/workflows/ci.yml'
+  workflow_dispatch:
+
+# Cancel in-progress runs on same branch
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  TERRAFORM_VERSION: "1.9.8"
+  TFLINT_VERSION: "v0.53.0"
+  CHECKOV_VERSION: "3.2.291"
+
+jobs:
+  detect-changes:
+    name: Detect Changes
+    runs-on: ubuntu-latest
+    outputs:
+      modules: ${{ steps.changes.outputs.modules }}
+      modules_list: ${{ steps.changes.outputs.modules_list }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get changed modules
+        id: changes
+        run: |
+          # Get list of changed files
+          CHANGED_FILES=$(git diff --name-only origin/main...HEAD)
+          echo "Changed files:"
+          echo "$CHANGED_FILES"
+          
+          # Extract unique module directories (first level directories containing .tf files)
+          CHANGED_MODULES=$(echo "$CHANGED_FILES" | grep '\.tf$' | cut -d'/' -f1 | sort -u | grep -E '^azure-' || true)
+          
+          if [ -n "$CHANGED_MODULES" ]; then
+            echo "Changed modules:"
+            echo "$CHANGED_MODULES"
+            
+            # Convert to JSON array format
+            MODULES_JSON=$(echo "$CHANGED_MODULES" | jq -R -s -c 'split("\n")[:-1]')
+            echo "modules=true" >> $GITHUB_OUTPUT
+            echo "modules_list=$MODULES_JSON" >> $GITHUB_OUTPUT
+          else
+            echo "No Terraform modules changed"
+            echo "modules=false" >> $GITHUB_OUTPUT
+            echo "modules_list=[]" >> $GITHUB_OUTPUT
+          fi
+
+  terraform-validate:
+    name: Terraform Validation
+    runs-on: ubuntu-latest
+    needs: detect-changes
+    if: needs.detect-changes.outputs.modules == 'true'
+    strategy:
+      matrix:
+        module: ${{ fromJson(needs.detect-changes.outputs.modules_list) }}
+      fail-fast: false
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+
+      - name: Terraform Format Check
+        id: fmt
+        run: terraform fmt -check -recursive ${{ matrix.module }}/
+        continue-on-error: true
+
+      - name: Terraform Init
+        id: init
+        run: |
+          cd ${{ matrix.module }}
+          terraform init -backend=false
+
+      - name: Terraform Validate
+        id: validate
+        run: |
+          cd ${{ matrix.module }}
+          terraform validate
+
+      - name: Comment Format Issues
+        if: steps.fmt.outcome == 'failure'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const output = `#### Terraform Format Check 📖\`${{ steps.fmt.outcome }}\`
+            
+            ❌ **Module**: \`${{ matrix.module }}\`
+            
+            **Format Issues Found**: Please run \`terraform fmt -recursive ${{ matrix.module }}/\` to fix formatting.
+            
+            <details><summary>Show Plan</summary>
+            
+            \`\`\`
+            ${{ steps.fmt.outputs.stdout }}
+            \`\`\`
+            
+            </details>`;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: output
+            });
+
+  terraform-lint:
+    name: Terraform Linting
+    runs-on: ubuntu-latest
+    needs: detect-changes
+    if: needs.detect-changes.outputs.modules == 'true'
+    strategy:
+      matrix:
+        module: ${{ fromJson(needs.detect-changes.outputs.modules_list) }}
+      fail-fast: false
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Cache TFLint plugin dir
+        uses: actions/cache@v4
+        with:
+          path: ~/.tflint.d/plugins
+          key: ${{ runner.os }}-tflint-${{ hashFiles('**/.tflint.hcl') }}
+
+      - name: Setup TFLint
+        uses: terraform-linters/setup-tflint@v4
+        with:
+          tflint_version: ${{ env.TFLINT_VERSION }}
+
+      - name: Show TFLint version
+        run: tflint --version
+
+      - name: Init TFLint
+        run: tflint --init
+
+      - name: Run TFLint
+        id: tflint
+        run: |
+          cd ${{ matrix.module }}
+          tflint --format compact --module
+        continue-on-error: true
+
+      - name: Comment Linting Issues
+        if: steps.tflint.outcome == 'failure'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const output = `#### TFLint 🔍\`${{ steps.tflint.outcome }}\`
+            
+            ❌ **Module**: \`${{ matrix.module }}\`
+            
+            **Linting Issues Found**:
+            
+            <details><summary>Show Issues</summary>
+            
+            \`\`\`
+            ${{ steps.tflint.outputs.stdout }}
+            \`\`\`
+            
+            </details>`;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: output
+            });
+
+  security-scan:
+    name: Security Scanning
+    runs-on: ubuntu-latest
+    needs: detect-changes
+    if: needs.detect-changes.outputs.modules == 'true'
+    strategy:
+      matrix:
+        module: ${{ fromJson(needs.detect-changes.outputs.modules_list) }}
+      fail-fast: false
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Checkov
+        run: |
+          python -m pip install --upgrade pip
+          pip install checkov==${{ env.CHECKOV_VERSION }}
+
+      - name: Run Checkov
+        id: checkov
+        run: |
+          checkov -d ${{ matrix.module }} \
+            --framework terraform \
+            --output cli \
+            --output json \
+            --output-file-path console,checkov_results_${{ matrix.module }}.json \
+            --download-external-modules false \
+            --quiet
+        continue-on-error: true
+
+      - name: Upload Checkov results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: checkov-results-${{ matrix.module }}
+          path: checkov_results_${{ matrix.module }}.json
+
+      - name: Comment Security Issues
+        if: steps.checkov.outcome == 'failure'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            let checkovResults = '';
+            try {
+              const results = JSON.parse(fs.readFileSync('checkov_results_${{ matrix.module }}.json', 'utf8'));
+              const failedChecks = results.results?.failed_checks || [];
+              if (failedChecks.length > 0) {
+                checkovResults = failedChecks.slice(0, 5).map(check => 
+                  `- **${check.check_id}**: ${check.check_name} (${check.file_path}:${check.file_line_range[0]})`
+                ).join('\n');
+                if (failedChecks.length > 5) {
+                  checkovResults += `\n- ... and ${failedChecks.length - 5} more issues`;
+                }
+              }
+            } catch (e) {
+              checkovResults = 'Unable to parse security scan results';
+            }
+            
+            const output = `#### Security Scan 🛡️\`${{ steps.checkov.outcome }}\`
+            
+            ⚠️ **Module**: \`${{ matrix.module }}\`
+            
+            **Security Issues Found**:
+            
+            ${checkovResults}
+            
+            📊 **Full Report**: Check the uploaded artifacts for complete results.`;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: output
+            });
+
+  secrets-scan:
+    name: Secrets Detection
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run TruffleHog OSS
+        id: trufflehog
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: origin/main
+          head: HEAD
+          extra_args: --debug --only-verified
+        continue-on-error: true
+
+      - name: Comment Secrets Found
+        if: steps.trufflehog.outcome == 'failure'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const output = `#### Secrets Detection 🔐\`${{ steps.trufflehog.outcome }}\`
+            
+            🚨 **SECURITY ALERT**: Potential secrets detected in your changes!
+            
+            **Action Required**: 
+            1. Review the changes for any exposed credentials, API keys, or sensitive information
+            2. Remove any secrets from your code
+            3. Rotate any compromised credentials
+            4. Consider using environment variables or secret management services
+            
+            **Never commit**:
+            - API keys, tokens, or passwords
+            - Private keys or certificates
+            - Database connection strings with credentials
+            - Cloud service account keys
+            
+            If this is a false positive, please review the detection results in the workflow logs.`;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: output
+            });
+
+  examples-validation:
+    name: Examples Validation
+    runs-on: ubuntu-latest
+    needs: detect-changes
+    if: needs.detect-changes.outputs.modules == 'true'
+    strategy:
+      matrix:
+        module: ${{ fromJson(needs.detect-changes.outputs.modules_list) }}
+      fail-fast: false
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+
+      - name: Validate Examples
+        run: |
+          MODULE_DIR="${{ matrix.module }}"
+          if [ -d "$MODULE_DIR/examples" ]; then
+            echo "Validating examples in $MODULE_DIR/examples/"
+            for example_dir in $MODULE_DIR/examples/*/; do
+              if [ -d "$example_dir" ] && [ -f "$example_dir/main.tf" ]; then
+                echo "Validating example: $example_dir"
+                cd "$example_dir"
+                terraform init -backend=false
+                terraform validate
+                cd - > /dev/null
+              fi
+            done
+          else
+            echo "No examples directory found in $MODULE_DIR"
+          fi
+
+  # Documentation validation
+  docs-validation:
+    name: Documentation Validation
+    runs-on: ubuntu-latest
+    needs: detect-changes
+    if: needs.detect-changes.outputs.modules == 'true'
+    strategy:
+      matrix:
+        module: ${{ fromJson(needs.detect-changes.outputs.modules_list) }}
+      fail-fast: false
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check Required Files
+        run: |
+          MODULE_DIR="${{ matrix.module }}"
+          ERRORS=0
+          
+          # Check for required files
+          REQUIRED_FILES=("main.tf" "variables.tf" "outputs.tf" "versions.tf" "README.md")
+          
+          for file in "${REQUIRED_FILES[@]}"; do
+            if [ ! -f "$MODULE_DIR/$file" ]; then
+              echo "❌ Missing required file: $MODULE_DIR/$file"
+              ERRORS=$((ERRORS + 1))
+            else
+              echo "✅ Found: $MODULE_DIR/$file"
+            fi
+          done
+          
+          # Check for examples directory
+          if [ ! -d "$MODULE_DIR/examples" ]; then
+            echo "⚠️ Missing examples directory in $MODULE_DIR"
+            ERRORS=$((ERRORS + 1))
+          else
+            echo "✅ Found: $MODULE_DIR/examples/"
+            
+            # Check for at least one example
+            if [ ! "$(find "$MODULE_DIR/examples" -name "main.tf" | head -1)" ]; then
+              echo "❌ No examples found in $MODULE_DIR/examples/"
+              ERRORS=$((ERRORS + 1))
+            fi
+          fi
+          
+          if [ $ERRORS -gt 0 ]; then
+            echo "Documentation validation failed with $ERRORS errors"
+            exit 1
+          fi
+          
+          echo "✅ Documentation validation passed for $MODULE_DIR"
+
+  # Job summary
+  ci-summary:
+    name: CI Summary
+    runs-on: ubuntu-latest
+    needs: [detect-changes, terraform-validate, terraform-lint, security-scan, secrets-scan, examples-validation, docs-validation]
+    if: always()
+    steps:
+      - name: Generate Summary
+        run: |
+          echo "## CI Pipeline Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "${{ needs.detect-changes.outputs.modules }}" == "true" ]; then
+            echo "### 📊 Modules Analyzed" >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`json" >> $GITHUB_STEP_SUMMARY
+            echo '${{ needs.detect-changes.outputs.modules_list }}' >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            
+            echo "### 🔍 Validation Results" >> $GITHUB_STEP_SUMMARY
+            echo "| Check | Status |" >> $GITHUB_STEP_SUMMARY
+            echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
+            echo "| Terraform Validation | ${{ needs.terraform-validate.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+            echo "| Terraform Linting | ${{ needs.terraform-lint.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+            echo "| Security Scanning | ${{ needs.security-scan.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+            echo "| Secrets Detection | ${{ needs.secrets-scan.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+            echo "| Examples Validation | ${{ needs.examples-validation.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+            echo "| Documentation | ${{ needs.docs-validation.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "### ℹ️ No Terraform modules were modified in this PR" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "The CI pipeline was skipped as no \`.tf\` files were changed in any module directories." >> $GITHUB_STEP_SUMMARY
+          fi

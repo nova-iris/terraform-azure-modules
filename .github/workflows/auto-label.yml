@@ -1,0 +1,176 @@
+name: Auto-Label PRs
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  label:
+    name: Auto-label PR
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Label based on changed files
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const prNumber = context.payload.pull_request.number;
+            
+            // Get list of changed files
+            const { data: files } = await github.rest.pulls.listFiles({
+              owner,
+              repo,
+              pull_number: prNumber
+            });
+            
+            const changedFiles = files.map(file => file.filename);
+            console.log('Changed files:', changedFiles);
+            
+            const labels = new Set();
+            
+            // Module-specific labels
+            const moduleMapping = {
+              'azure-firewall': 'module/firewall',
+              'azure-load-balancer': 'module/load-balancer',
+              'azure-private-dns': 'module/private-dns',
+              'azure-storage': 'module/storage',
+              'azure-vm': 'module/vm',
+              'azure-vnet': 'module/vnet',
+              'azure-vwan': 'module/vwan',
+              'azure-vwan-dns': 'module/vwan-dns',
+              'azure-vwan-hub': 'module/vwan-hub'
+            };
+            
+            // Check each changed file
+            for (const file of changedFiles) {
+              // Module labels
+              for (const [moduleName, label] of Object.entries(moduleMapping)) {
+                if (file.startsWith(moduleName + '/')) {
+                  labels.add(label);
+                }
+              }
+              
+              // File type labels
+              if (file.endsWith('.tf')) {
+                labels.add('terraform');
+              }
+              if (file.endsWith('.md')) {
+                labels.add('documentation');
+              }
+              if (file.includes('example')) {
+                labels.add('examples');
+              }
+              if (file.includes('.github/workflows/')) {
+                labels.add('ci/cd');
+              }
+              if (file === 'versions.tf' || file.endsWith('/versions.tf')) {
+                labels.add('dependencies');
+              }
+              if (file.includes('variables.tf')) {
+                labels.add('variables');
+              }
+              if (file.includes('outputs.tf')) {
+                labels.add('outputs');
+              }
+            }
+            
+            // Size labels based on number of changed files
+            if (changedFiles.length <= 5) {
+              labels.add('size/XS');
+            } else if (changedFiles.length <= 15) {
+              labels.add('size/S');
+            } else if (changedFiles.length <= 30) {
+              labels.add('size/M');
+            } else if (changedFiles.length <= 50) {
+              labels.add('size/L');
+            } else {
+              labels.add('size/XL');
+            }
+            
+            // Apply labels
+            if (labels.size > 0) {
+              await github.rest.issues.addLabels({
+                owner,
+                repo,
+                issue_number: prNumber,
+                labels: Array.from(labels)
+              });
+              
+              console.log('Applied labels:', Array.from(labels));
+            }
+
+      - name: Auto-assign reviewers
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const prNumber = context.payload.pull_request.number;
+            const author = context.payload.pull_request.user.login;
+            
+            // Get list of changed files
+            const { data: files } = await github.rest.pulls.listFiles({
+              owner,
+              repo,
+              pull_number: prNumber
+            });
+            
+            const changedFiles = files.map(file => file.filename);
+            const reviewers = new Set();
+            
+            // Define team mappings (adjust based on your actual GitHub teams/users)
+            const teamMapping = {
+              'azure-firewall': ['network-team-lead'],
+              'azure-load-balancer': ['network-team-lead'],
+              'azure-private-dns': ['network-team-lead'],
+              'azure-storage': ['storage-team-lead'],
+              'azure-vm': ['compute-team-lead'],
+              'azure-vnet': ['network-team-lead'],
+              'azure-vwan': ['network-team-lead'],
+              'azure-vwan-dns': ['network-team-lead'],
+              'azure-vwan-hub': ['network-team-lead']
+            };
+            
+            // Add reviewers based on changed modules
+            for (const file of changedFiles) {
+              for (const [moduleName, teamMembers] of Object.entries(teamMapping)) {
+                if (file.startsWith(moduleName + '/')) {
+                  teamMembers.forEach(reviewer => reviewers.add(reviewer));
+                }
+              }
+              
+              // Add docs team for documentation changes
+              if (file.endsWith('.md')) {
+                reviewers.add('docs-team-lead');
+              }
+              
+              // Add devops team for CI/CD changes
+              if (file.includes('.github/')) {
+                reviewers.add('devops-team-lead');
+              }
+            }
+            
+            // Remove the author from reviewers
+            reviewers.delete(author);
+            
+            // Request reviews (limit to 3 reviewers to avoid spam)
+            const reviewersList = Array.from(reviewers).slice(0, 3);
+            if (reviewersList.length > 0) {
+              try {
+                await github.rest.pulls.requestReviewers({
+                  owner,
+                  repo,
+                  pull_number: prNumber,
+                  reviewers: reviewersList
+                });
+                
+                console.log('Requested reviews from:', reviewersList);
+              } catch (error) {
+                console.log('Note: Some reviewers may not exist or have access:', error.message);
+              }
+            }

@@ -1,0 +1,142 @@
+# Dependabot configuration for Terraform Azure Modules
+# This ensures that Terraform providers and GitHub Actions are kept up to date
+
+version: 2
+
+updates:
+  # Terraform provider updates
+  - package-ecosystem: "terraform"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "terraform-maintainers"
+    assignees:
+      - "terraform-maintainers"
+    commit-message:
+      prefix: "chore"
+      prefix-development: "chore"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "terraform"
+    # Group all terraform provider updates together
+    groups:
+      terraform-providers:
+        patterns:
+          - "hashicorp/*"
+          - "terraform-providers/*"
+        update-types:
+          - "minor"
+          - "patch"
+
+  # GitHub Actions updates
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "10:00"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "github-actions-maintainers"
+    commit-message:
+      prefix: "ci"
+      prefix-development: "ci"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "github-actions"
+    # Group minor and patch updates together
+    groups:
+      github-actions:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+
+  # Each module directory for terraform provider updates
+  - package-ecosystem: "terraform"
+    directory: "/azure-firewall"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 2
+    labels:
+      - "dependencies"
+      - "azure-firewall"
+
+  - package-ecosystem: "terraform"
+    directory: "/azure-load-balancer"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 2
+    labels:
+      - "dependencies"
+      - "azure-load-balancer"
+
+  - package-ecosystem: "terraform"
+    directory: "/azure-private-dns"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 2
+    labels:
+      - "dependencies"
+      - "azure-private-dns"
+
+  - package-ecosystem: "terraform"
+    directory: "/azure-storage"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 2
+    labels:
+      - "dependencies"
+      - "azure-storage"
+
+  - package-ecosystem: "terraform"
+    directory: "/azure-vm"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 2
+    labels:
+      - "dependencies"
+      - "azure-vm"
+
+  - package-ecosystem: "terraform"
+    directory: "/azure-vnet"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 2
+    labels:
+      - "dependencies"
+      - "azure-vnet"
+
+  - package-ecosystem: "terraform"
+    directory: "/azure-vwan"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 2
+    labels:
+      - "dependencies"
+      - "azure-vwan"
+
+  - package-ecosystem: "terraform"
+    directory: "/azure-vwan-dns"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 2
+    labels:
+      - "dependencies"
+      - "azure-vwan-dns"
+
+  - package-ecosystem: "terraform"
+    directory: "/azure-vwan-hub"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 2
+    labels:
+      - "dependencies"
+      - "azure-vwan-hub"

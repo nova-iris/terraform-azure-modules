@@ -1,0 +1,66 @@
+name: Stale Issues and PRs
+
+on:
+  schedule:
+    # Run daily at 2 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+
+jobs:
+  stale:
+    name: Check for stale issues and PRs
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      pull-requests: write
+    steps:
+      - name: Mark stale issues and PRs
+        uses: actions/stale@v9
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          
+          # Issues configuration
+          days-before-issue-stale: 60
+          days-before-issue-close: 14
+          stale-issue-message: |
+            This issue has been automatically marked as stale because it has not had recent activity. 
+            It will be closed if no further activity occurs within 14 days.
+            
+            If this issue is still relevant, please:
+            - Add a comment to keep it open
+            - Add the `keep-open` label
+            - Provide any additional context or updates
+            
+            Thank you for your contributions!
+          close-issue-message: |
+            This issue has been automatically closed due to inactivity. 
+            If you believe this issue is still relevant, please feel free to reopen it or create a new issue with updated information.
+          stale-issue-label: 'stale'
+          exempt-issue-labels: 'keep-open,pinned,security,help-wanted,good-first-issue'
+          
+          # Pull requests configuration
+          days-before-pr-stale: 30
+          days-before-pr-close: 7
+          stale-pr-message: |
+            This pull request has been automatically marked as stale because it has not had recent activity.
+            It will be closed if no further activity occurs within 7 days.
+            
+            If this PR is still being worked on, please:
+            - Add a comment with an update
+            - Push new commits to the branch
+            - Add the `keep-open` label
+            
+            Thank you for your contribution!
+          close-pr-message: |
+            This pull request has been automatically closed due to inactivity.
+            If you would like to continue working on this PR, please feel free to reopen it or create a new PR.
+          stale-pr-label: 'stale'
+          exempt-pr-labels: 'keep-open,pinned,security,breaking-change,dependencies'
+          
+          # Additional configuration
+          ascending: true
+          operations-per-run: 100
+          remove-stale-when-updated: true
+          
+          # Debug mode - remove in production
+          debug-only: false

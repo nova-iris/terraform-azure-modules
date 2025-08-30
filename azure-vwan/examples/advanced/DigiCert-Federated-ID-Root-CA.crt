@@ -1,0 +1,8 @@
+# Sample Certificate for Point-to-Site VPN
+# Replace this with your actual root certificate
+-----BEGIN CERTIFICATE-----
+# This is a placeholder certificate
+# Replace with your actual DigiCert Federated ID Root CA certificate
+# or any other root certificate you want to use for P2S authentication
+MIIBkTCB+wIJANZ...sample...certificate...data...here
+-----END CERTIFICATE-----

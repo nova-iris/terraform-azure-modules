@@ -185,28 +185,9 @@ variable "use_hub_gateway" {
   default     = false
 }
 
-# Module Source Paths
-variable "azure_vnet_module_source" {
-  description = "Source path for the azure-vnet module"
-  type        = string
-  default     = "../azure-vnet"
-}
-
-variable "azure_private_dns_module_source" {
-  description = "Source path for the azure-private-dns module"
-  type        = string
-  default     = "../azure-private-dns"
-}
-
 # DDoS Protection
 variable "enable_ddos_protection" {
   description = "Enable DDoS protection for the DNS VNet"
   type        = bool
   default     = false
-}
-
-variable "ddos_protection_plan_id" {
-  description = "Resource ID of the DDoS protection plan"
-  type        = string
-  default     = null
 }

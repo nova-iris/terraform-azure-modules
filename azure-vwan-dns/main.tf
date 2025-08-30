@@ -19,7 +19,7 @@ resource "azurerm_resource_group" "main" {
 
 # Create dedicated DNS VNet using azure-vnet module
 module "dns_vnet" {
-  source = var.azure_vnet_module_source
+  source = "../azure-vnet"
 
   name                = var.dns_vnet_name
   location            = var.location
@@ -69,15 +69,14 @@ module "dns_vnet" {
   ]
 
   # Enable DDoS protection if required
-  enable_ddos_protection  = var.enable_ddos_protection
-  ddos_protection_plan_id = var.ddos_protection_plan_id
+  enable_ddos_protection = var.enable_ddos_protection
 
   tags = local.merged_tags
 }
 
 # Create Private DNS zones using azure-private-dns module
 module "private_dns" {
-  source = var.azure_private_dns_module_source
+  source = "../azure-private-dns"
 
   private_dns_zone_name = var.primary_dns_zone
   location              = var.location
@@ -118,7 +117,7 @@ module "private_dns" {
 
 # Create additional Private DNS zones if specified
 module "additional_private_dns_zones" {
-  source = var.azure_private_dns_module_source
+  source = "../azure-private-dns"
 
   for_each = var.additional_dns_zones
 

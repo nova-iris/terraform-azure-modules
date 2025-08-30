@@ -135,31 +135,6 @@ variable "additional_dns_zones" {
   default = {}
 }
 
-# DNS Forwarding Configuration
-variable "dns_forwarding_rulesets" {
-  description = "DNS forwarding rulesets for hybrid connectivity"
-  type = map(object({
-    name                  = string
-    outbound_endpoint_ids = optional(list(string), [])
-    virtual_network_links = optional(map(object({
-      name               = string
-      virtual_network_id = string
-      metadata           = optional(map(string), {})
-    })), {})
-    forwarding_rules = optional(map(object({
-      name        = string
-      domain_name = string
-      enabled     = optional(bool, true)
-      metadata    = optional(map(string), {})
-      target_dns_servers = list(object({
-        ip_address = string
-        port       = optional(number, 53)
-      }))
-    })), {})
-  }))
-  default = {}
-}
-
 # Virtual WAN Hub Connectivity
 variable "hub_virtual_network_id" {
   description = "Resource ID of the Virtual WAN Hub VNet for peering (optional)"

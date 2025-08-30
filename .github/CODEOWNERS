@@ -1,0 +1,34 @@
+# Global owners - these users will be requested for review when
+# any file in the repository is modified
+* @terraform-maintainers
+
+# GitHub workflows and CI/CD
+/.github/ @devops-team @terraform-maintainers
+
+# Documentation
+README.md @docs-team @terraform-maintainers
+**/README.md @docs-team @terraform-maintainers
+
+# Module-specific owners
+/azure-firewall/ @network-team @terraform-maintainers
+/azure-load-balancer/ @network-team @terraform-maintainers
+/azure-private-dns/ @network-team @terraform-maintainers
+
+/azure-vm/ @compute-team @terraform-maintainers
+
+/azure-storage/ @storage-team @terraform-maintainers
+
+/azure-vnet/ @network-team @terraform-maintainers
+/azure-vwan/ @network-team @terraform-maintainers
+/azure-vwan-dns/ @network-team @terraform-maintainers
+/azure-vwan-hub/ @network-team @terraform-maintainers
+
+# Security and compliance files
+.tflint.hcl @security-team @terraform-maintainers
+.github/dependabot.yml @security-team @devops-team
+
+# Version and provider files
+**/versions.tf @terraform-maintainers
+
+# Examples - require both module owners and docs team
+**/examples/ @docs-team @terraform-maintainers

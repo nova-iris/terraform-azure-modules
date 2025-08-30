@@ -30,6 +30,15 @@ override.tf.json
 .terraformrc
 terraform.rc
 
+# TFLint cache
+.tflint.d/
+
+# Checkov results
+checkov_results*.json
+
+# Terraform docs temp files
+.terraform-docs.yml.tmp
+
 # OS generated files
 .DS_Store
 .DS_Store?

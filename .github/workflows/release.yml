@@ -48,7 +48,7 @@ jobs:
 
       - name: Analyze conventional commits
         id: conventional
-        uses: cycjimmy/semantic-release-action@v4
+        uses: cycjimmy/semantic-release-action@v5
         with:
           semantic_version: 24.5.0
           extra_plugins: |

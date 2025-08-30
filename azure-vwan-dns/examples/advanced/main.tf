@@ -21,12 +21,6 @@ variable "subscription_id" {
   type        = string
 }
 
-variable "onprem_dns_servers" {
-  description = "On-premises DNS server IP addresses"
-  type        = list(string)
-  default     = ["192.168.1.10", "192.168.1.11"]
-}
-
 # Create resource groups
 resource "azurerm_resource_group" "dns" {
   name     = "rg-vwan-dns-advanced"
@@ -146,52 +140,6 @@ module "vwan_dns" {
     }
   }
 
-  # DNS Forwarding for Hybrid Connectivity
-  dns_forwarding_rulesets = {
-    "onprem-forwarding" = {
-      name = "onprem-dns-forwarding"
-      virtual_network_links = {
-        "hub-link" = {
-          name               = "hub-vnet-link"
-          virtual_network_id = azurerm_virtual_network.hub.id
-          metadata = {
-            purpose = "hub-connectivity"
-          }
-        }
-      }
-      forwarding_rules = {
-        "corp-domain" = {
-          name        = "corp-domain-rule"
-          domain_name = "corp.company.com."
-          enabled     = true
-          metadata = {
-            description = "Forward corporate domain to on-premises"
-          }
-          target_dns_servers = [
-            for ip in var.onprem_dns_servers : {
-              ip_address = ip
-              port       = 53
-            }
-          ]
-        },
-        "dev-domain" = {
-          name        = "dev-domain-rule"
-          domain_name = "dev.company.com."
-          enabled     = true
-          metadata = {
-            description = "Forward development domain to on-premises"
-          }
-          target_dns_servers = [
-            for ip in var.onprem_dns_servers : {
-              ip_address = ip
-              port       = 53
-            }
-          ]
-        }
-      }
-    }
-  }
-
   # Virtual WAN Hub Connectivity
   hub_virtual_network_id   = azurerm_virtual_network.hub.id
   hub_resource_group_name  = azurerm_resource_group.hub.name
@@ -218,28 +166,19 @@ output "firewall_dns_configuration" {
   value       = module.vwan_dns.firewall_dns_configuration
 }
 
-output "spoke_dns_configuration" {
-  description = "DNS configuration for spoke VNets"
-  value       = module.vwan_dns.spoke_vnet_dns_configuration
-}
-
 output "all_dns_zones" {
   description = "All configured DNS zones"
   value       = module.vwan_dns.all_dns_zones
-}
-
-output "dns_forwarding_rules" {
-  description = "Configured DNS forwarding rules"
-  value       = module.vwan_dns.dns_forwarding_rule_ids
 }
 
 # Example configuration guidance
 output "next_steps" {
   description = "Next steps for completing the Virtual WAN DNS setup"
   value = {
-    firewall_configuration = "Configure Azure Firewall with DNS servers: ${jsonencode([module.vwan_dns.dns_resolver_inbound_endpoint_ip])}"
+    firewall_configuration = "Configure Azure Firewall with DNS servers: ${jsonencode(module.vwan_dns.firewall_dns_configuration.dns_servers)}"
     spoke_vnet_dns         = "Configure spoke VNets to use Azure Firewall private IP as DNS server"
     dns_zones_available    = "Available DNS zones: ${jsonencode(keys(module.vwan_dns.all_dns_zones))}"
     monitoring             = "Enable DNS query logging on Azure Firewall for monitoring and troubleshooting"
+    dns_resolver_note      = "Note: DNS resolver endpoints require separate configuration with azurerm_private_dns_resolver resource"
   }
 }

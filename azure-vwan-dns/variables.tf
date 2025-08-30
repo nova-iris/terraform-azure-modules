@@ -135,31 +135,6 @@ variable "additional_dns_zones" {
   default = {}
 }
 
-# DNS Forwarding Configuration
-variable "dns_forwarding_rulesets" {
-  description = "DNS forwarding rulesets for hybrid connectivity"
-  type = map(object({
-    name                  = string
-    outbound_endpoint_ids = optional(list(string), [])
-    virtual_network_links = optional(map(object({
-      name               = string
-      virtual_network_id = string
-      metadata           = optional(map(string), {})
-    })), {})
-    forwarding_rules = optional(map(object({
-      name        = string
-      domain_name = string
-      enabled     = optional(bool, true)
-      metadata    = optional(map(string), {})
-      target_dns_servers = list(object({
-        ip_address = string
-        port       = optional(number, 53)
-      }))
-    })), {})
-  }))
-  default = {}
-}
-
 # Virtual WAN Hub Connectivity
 variable "hub_virtual_network_id" {
   description = "Resource ID of the Virtual WAN Hub VNet for peering (optional)"
@@ -185,28 +160,9 @@ variable "use_hub_gateway" {
   default     = false
 }
 
-# Module Source Paths
-variable "azure_vnet_module_source" {
-  description = "Source path for the azure-vnet module"
-  type        = string
-  default     = "../azure-vnet"
-}
-
-variable "azure_private_dns_module_source" {
-  description = "Source path for the azure-private-dns module"
-  type        = string
-  default     = "../azure-private-dns"
-}
-
 # DDoS Protection
 variable "enable_ddos_protection" {
   description = "Enable DDoS protection for the DNS VNet"
   type        = bool
   default     = false
-}
-
-variable "ddos_protection_plan_id" {
-  description = "Resource ID of the DDoS protection plan"
-  type        = string
-  default     = null
 }

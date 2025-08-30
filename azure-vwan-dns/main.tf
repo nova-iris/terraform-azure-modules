@@ -19,7 +19,7 @@ resource "azurerm_resource_group" "main" {
 
 # Create dedicated DNS VNet using azure-vnet module
 module "dns_vnet" {
-  source = var.azure_vnet_module_source
+  source = "../azure-vnet"
 
   name                = var.dns_vnet_name
   location            = var.location
@@ -69,90 +69,72 @@ module "dns_vnet" {
   ]
 
   # Enable DDoS protection if required
-  enable_ddos_protection  = var.enable_ddos_protection
-  ddos_protection_plan_id = var.ddos_protection_plan_id
+  enable_ddos_protection = var.enable_ddos_protection
 
   tags = local.merged_tags
 }
 
-# Create Private DNS zones using azure-private-dns module
-module "private_dns" {
-  source = var.azure_private_dns_module_source
+# Create Primary Private DNS Zone
+resource "azurerm_private_dns_zone" "primary" {
+  name                = var.primary_dns_zone
+  resource_group_name = local.resource_group_name
+  tags                = local.merged_tags
+}
 
-  private_dns_zone_name = var.primary_dns_zone
-  location              = var.location
+# Link DNS VNet to primary zone
+resource "azurerm_private_dns_zone_virtual_network_link" "primary" {
+  name                  = "${var.dns_vnet_name}-to-${replace(var.primary_dns_zone, ".", "-")}"
   resource_group_name   = local.resource_group_name
-  create_resource_group = false
-
-  # Link DNS VNet to the zone
-  virtual_network_links = {
-    "dns-vnet" = {
-      virtual_network_id   = module.dns_vnet.vnet_id
-      registration_enabled = true
-    }
-  }
-
-  # Enable DNS Resolver
-  enable_dns_resolver             = true
-  dns_resolver_virtual_network_id = module.dns_vnet.vnet_id
-
-  # Configure inbound endpoint
-  enable_inbound_endpoint = true
-  inbound_endpoint_ip_configurations = [
-    {
-      private_ip_allocation_method = "Dynamic"
-      subnet_id                    = module.dns_vnet.subnet_ids[var.dns_resolver_inbound_subnet_name]
-      private_ip_address           = null
-    }
-  ]
-
-  # Configure outbound endpoint
-  enable_outbound_endpoint    = true
-  outbound_endpoint_subnet_id = module.dns_vnet.subnet_ids[var.dns_resolver_outbound_subnet_name]
-
-  # DNS Forwarding Rulesets for hybrid connectivity
-  dns_forwarding_rulesets = var.dns_forwarding_rulesets
-
-  tags = local.merged_tags
+  private_dns_zone_name = azurerm_private_dns_zone.primary.name
+  virtual_network_id    = module.dns_vnet.vnet_id
+  registration_enabled  = true
+  tags                  = local.merged_tags
 }
 
 # Create additional Private DNS zones if specified
-module "additional_private_dns_zones" {
-  source = var.azure_private_dns_module_source
-
+resource "azurerm_private_dns_zone" "additional" {
   for_each = var.additional_dns_zones
 
-  private_dns_zone_name = each.value.name
-  location              = var.location
+  name                = each.value.name
+  resource_group_name = local.resource_group_name
+  tags                = local.merged_tags
+}
+
+# Link additional DNS zones to DNS VNet
+resource "azurerm_private_dns_zone_virtual_network_link" "additional_dns_vnet" {
+  for_each = var.additional_dns_zones
+
+  name                  = "${var.dns_vnet_name}-to-${replace(each.value.name, ".", "-")}"
   resource_group_name   = local.resource_group_name
-  create_resource_group = false
+  private_dns_zone_name = azurerm_private_dns_zone.additional[each.key].name
+  virtual_network_id    = module.dns_vnet.vnet_id
+  registration_enabled  = each.value.registration_enabled
+  tags                  = local.merged_tags
+}
 
-  # Link DNS VNet and spoke VNets to each additional zone
-  virtual_network_links = merge(
-    {
-      "dns-vnet" = {
-        virtual_network_id   = module.dns_vnet.vnet_id
-        registration_enabled = each.value.registration_enabled
-      }
-    },
-    {
-      for spoke_key, spoke_config in each.value.spoke_vnet_links : spoke_key => {
-        virtual_network_id   = spoke_config.virtual_network_id
-        registration_enabled = spoke_config.registration_enabled
-      }
-    }
-  )
+# Link additional DNS zones to spoke VNets
+resource "azurerm_private_dns_zone_virtual_network_link" "additional_spokes" {
+  for_each = {
+    for link_key, link_config in flatten([
+      for zone_key, zone_config in var.additional_dns_zones : [
+        for spoke_key, spoke_config in zone_config.spoke_vnet_links : {
+          key                  = "${zone_key}-${spoke_key}"
+          zone_key             = zone_key
+          zone_name            = zone_config.name
+          spoke_key            = spoke_key
+          virtual_network_id   = spoke_config.virtual_network_id
+          registration_enabled = spoke_config.registration_enabled
+        }
+      ]
+    ]) : link_config.key => link_config
+  }
 
-  # Create DNS records if specified
-  a_records     = lookup(each.value, "a_records", {})
-  aaaa_records  = lookup(each.value, "aaaa_records", {})
-  cname_records = lookup(each.value, "cname_records", {})
-  mx_records    = lookup(each.value, "mx_records", {})
-  ptr_records   = lookup(each.value, "ptr_records", {})
-  srv_records   = lookup(each.value, "srv_records", {})
-  txt_records   = lookup(each.value, "txt_records", {})
-
-  tags = local.merged_tags
+  name                  = "${each.value.spoke_key}-to-${replace(each.value.zone_name, ".", "-")}"
+  resource_group_name   = local.resource_group_name
+  private_dns_zone_name = azurerm_private_dns_zone.additional[each.value.zone_key].name
+  virtual_network_id    = each.value.virtual_network_id
+  registration_enabled  = each.value.registration_enabled
+  tags                  = local.merged_tags
 }
 
 # Create VNet peering connections to Virtual WAN Hub (if hub_virtual_network_id is provided)

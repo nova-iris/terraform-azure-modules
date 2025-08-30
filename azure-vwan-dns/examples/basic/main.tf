@@ -61,7 +61,7 @@ output "dns_vnet_id" {
 }
 
 output "dns_resolver_inbound_ip" {
-  description = "Private IP address of the DNS resolver inbound endpoint"
+  description = "Note about DNS resolver inbound endpoint"
   value       = module.vwan_dns.dns_resolver_inbound_endpoint_ip
 }
 

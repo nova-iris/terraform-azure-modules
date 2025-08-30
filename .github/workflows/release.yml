@@ -48,9 +48,8 @@ jobs:
 
       - name: Analyze conventional commits
         id: conventional
-        uses: cycjimmy/semantic-release-action@v4
+        uses: cycjimmy/semantic-release-action@v5
         with:
-          semantic_version: 24.5.0
           extra_plugins: |
             @semantic-release/changelog@6.0.3
             @semantic-release/git@10.0.1
@@ -240,85 +239,15 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Create semantic release config
-        run: |
-          cat > .releaserc.json << 'EOF'
-          {
-            "branches": ["main"],
-            "plugins": [
-              [
-                "@semantic-release/commit-analyzer",
-                {
-                  "preset": "conventionalcommits",
-                  "releaseRules": [
-                    {"type": "feat", "release": "minor"},
-                    {"type": "fix", "release": "patch"},
-                    {"type": "docs", "release": "patch"},
-                    {"type": "style", "release": false},
-                    {"type": "refactor", "release": "patch"},
-                    {"type": "perf", "release": "patch"},
-                    {"type": "test", "release": false},
-                    {"type": "build", "release": "patch"},
-                    {"type": "ci", "release": false},
-                    {"type": "chore", "release": false},
-                    {"type": "revert", "release": "patch"},
-                    {"scope": "no-release", "release": false},
-                    {"breaking": true, "release": "major"}
-                  ]
-                }
-              ],
-              [
-                "@semantic-release/release-notes-generator",
-                {
-                  "preset": "conventionalcommits",
-                  "presetConfig": {
-                    "types": [
-                      {"type": "feat", "section": "✨ Features"},
-                      {"type": "fix", "section": "🐛 Bug Fixes"},
-                      {"type": "docs", "section": "📚 Documentation"},
-                      {"type": "refactor", "section": "♻️ Code Refactoring"},
-                      {"type": "perf", "section": "⚡ Performance Improvements"},
-                      {"type": "build", "section": "🔧 Build System"},
-                      {"type": "revert", "section": "⏪ Reverts"}
-                    ]
-                  }
-                }
-              ],
-              [
-                "@semantic-release/changelog",
-                {
-                  "changelogFile": "CHANGELOG.md"
-                }
-              ],
-              [
-                "@semantic-release/github",
-                {
-                  "assets": []
-                }
-              ],
-              [
-                "@semantic-release/git",
-                {
-                  "assets": ["CHANGELOG.md"],
-                  "message": "chore(release): ${nextRelease.version} [skip ci]\n\n${nextRelease.notes}"
-                }
-              ]
-            ]
-          }
-          EOF
-
-      - name: Install semantic-release
-        run: |
-          npm install -g semantic-release@24.5.0
-          npm install -g @semantic-release/changelog@6.0.3
-          npm install -g @semantic-release/git@10.0.1
-          npm install -g conventional-changelog-conventionalcommits@8.0.0
-
       - name: Create Release (Automatic)
         id: release
         if: github.event_name != 'workflow_dispatch'
-        run: |
-          semantic-release
+        uses: cycjimmy/semantic-release-action@v5
+        with:
+          extra_plugins: |
+            @semantic-release/changelog@6.0.3
+            @semantic-release/git@10.0.1
+            conventional-changelog-conventionalcommits@8.0.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

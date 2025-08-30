@@ -5,7 +5,7 @@ terraform {
   required_providers {
     azurerm = {
       source  = "hashicorp/azurerm"
-      version = "~> 3.0"
+      version = ">= 4.42.0"
     }
   }
 }
@@ -331,7 +331,7 @@ module "spoke2_vnet" {
 # Hub-to-Spoke peerings (return connections)
 resource "azurerm_virtual_network_peering" "hub_to_spoke1" {
   name                      = "hub-to-spoke1"
-  resource_group_name       = azurerm_resource_group.hub.name
+  resource_group_name       = data.azurerm_resource_group.hub.name
   virtual_network_name      = module.hub_vnet.vnet_name
   remote_virtual_network_id = module.spoke1_vnet.vnet_id
 
@@ -343,7 +343,7 @@ resource "azurerm_virtual_network_peering" "hub_to_spoke1" {
 
 resource "azurerm_virtual_network_peering" "hub_to_spoke2" {
   name                      = "hub-to-spoke2"
-  resource_group_name       = azurerm_resource_group.hub.name
+  resource_group_name       = data.azurerm_resource_group.hub.name
   virtual_network_name      = module.hub_vnet.vnet_name
   remote_virtual_network_id = module.spoke2_vnet.vnet_id
 

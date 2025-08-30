@@ -28,7 +28,7 @@ resource "azurerm_private_dns_zone" "main" {
 resource "azurerm_private_dns_zone_virtual_network_link" "main" {
   for_each = var.virtual_network_links
 
-  name                  = "${module.naming.private_dns_zone_virtual_network_link.name}-${each.key}"
+  name                  = "vnet-link-${each.key}"
   resource_group_name   = local.resource_group_name
   private_dns_zone_name = azurerm_private_dns_zone.main.name
   virtual_network_id    = each.value.virtual_network_id
@@ -142,28 +142,14 @@ resource "azurerm_private_dns_txt_record" "main" {
   }
 }
 
-# Private Endpoint DNS Zone Groups (for Private Link services)
-resource "azurerm_private_dns_zone_group" "main" {
-  for_each = var.private_endpoint_dns_zone_groups
-
-  name                = each.value.name
-  resource_group_name = local.resource_group_name
-  private_endpoint_id = each.value.private_endpoint_id
-
-  dynamic "private_dns_zone_config" {
-    for_each = each.value.private_dns_zone_configs
-    content {
-      name                = private_dns_zone_config.value.name
-      private_dns_zone_id = private_dns_zone_config.value.private_dns_zone_id != null ? private_dns_zone_config.value.private_dns_zone_id : azurerm_private_dns_zone.main.id
-    }
-  }
-}
+# Note: Private Endpoint DNS Zone Groups are not supported in this AzureRM provider version
+# These would be configured directly on the private endpoint resource
 
 # Private DNS Resolver (if enabled)
 resource "azurerm_private_dns_resolver" "main" {
   count = var.enable_dns_resolver ? 1 : 0
 
-  name                = module.naming.private_dns_resolver.name
+  name                = "dns-resolver-${var.project_name}-${var.environment}"
   resource_group_name = local.resource_group_name
   location            = var.location
   virtual_network_id  = var.dns_resolver_virtual_network_id
@@ -174,7 +160,7 @@ resource "azurerm_private_dns_resolver" "main" {
 resource "azurerm_private_dns_resolver_inbound_endpoint" "main" {
   count = var.enable_dns_resolver && var.enable_inbound_endpoint ? 1 : 0
 
-  name                    = module.naming.private_dns_resolver_inbound_endpoint.name
+  name                    = "dns-resolver-inbound-${var.project_name}-${var.environment}"
   private_dns_resolver_id = azurerm_private_dns_resolver.main[0].id
   location                = var.location
   tags                    = local.merged_tags
@@ -193,7 +179,7 @@ resource "azurerm_private_dns_resolver_inbound_endpoint" "main" {
 resource "azurerm_private_dns_resolver_outbound_endpoint" "main" {
   count = var.enable_dns_resolver && var.enable_outbound_endpoint ? 1 : 0
 
-  name                    = module.naming.private_dns_resolver_outbound_endpoint.name
+  name                    = "dns-resolver-outbound-${var.project_name}-${var.environment}"
   private_dns_resolver_id = azurerm_private_dns_resolver.main[0].id
   location                = var.location
   subnet_id               = var.outbound_endpoint_subnet_id

@@ -106,13 +106,7 @@ output "txt_record_ids" {
   }
 }
 
-# Private Endpoint DNS Zone Group Outputs
-output "private_endpoint_dns_zone_group_ids" {
-  description = "Map of private endpoint DNS zone group names to their IDs"
-  value = {
-    for name, group in azurerm_private_dns_zone_group.main : name => group.id
-  }
-}
+# Note: Private endpoint DNS zone groups removed - not supported in current AzureRM provider version
 
 # DNS Resolver Outputs
 output "dns_resolver_id" {

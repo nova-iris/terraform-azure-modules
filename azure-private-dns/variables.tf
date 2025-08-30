@@ -135,19 +135,8 @@ variable "txt_records" {
   default = {}
 }
 
-# Private Endpoint DNS Zone Groups
-variable "private_endpoint_dns_zone_groups" {
-  description = "Map of private endpoint DNS zone groups to create"
-  type = map(object({
-    name                = string
-    private_endpoint_id = string
-    private_dns_zone_configs = list(object({
-      name                = string
-      private_dns_zone_id = optional(string)
-    }))
-  }))
-  default = {}
-}
+# Note: Private Endpoint DNS Zone Groups are not supported in current AzureRM provider version
+# These should be configured directly on the private endpoint resource
 
 # DNS Resolver Configuration
 variable "enable_dns_resolver" {

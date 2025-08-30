@@ -98,12 +98,12 @@ module "private_dns" {
   source = "../../"
 
   # Advanced configuration
-  location                = azurerm_resource_group.example.location
-  resource_group_name     = azurerm_resource_group.example.name
-  create_resource_group   = false
-  private_dns_zone_name   = "corp.internal"
-  environment            = "production"
-  project_name           = "corporate-infrastructure"
+  location              = azurerm_resource_group.example.location
+  resource_group_name   = azurerm_resource_group.example.name
+  create_resource_group = false
+  private_dns_zone_name = "corp.internal"
+  environment           = "production"
+  project_name          = "corporate-infrastructure"
 
   # Multiple virtual network links
   virtual_network_links = {
@@ -122,11 +122,11 @@ module "private_dns" {
   }
 
   # DNS Resolver configuration
-  enable_dns_resolver              = true
-  dns_resolver_virtual_network_id  = azurerm_virtual_network.hub.id
-  enable_inbound_endpoint          = true
-  enable_outbound_endpoint         = true
-  outbound_endpoint_subnet_id      = azurerm_subnet.dns_outbound.id
+  enable_dns_resolver             = true
+  dns_resolver_virtual_network_id = azurerm_virtual_network.hub.id
+  enable_inbound_endpoint         = true
+  enable_outbound_endpoint        = true
+  outbound_endpoint_subnet_id     = azurerm_subnet.dns_outbound.id
 
   inbound_endpoint_ip_configurations = [
     {
@@ -278,11 +278,11 @@ module "private_dns" {
   }
 
   tags = {
-    Environment   = "Production"
-    Project       = "Corporate-Infrastructure"
-    Example       = "Advanced"
-    CostCenter    = "IT"
-    Owner         = "Platform-Team"
-    Compliance    = "SOC2"
+    Environment = "Production"
+    Project     = "Corporate-Infrastructure"
+    Example     = "Advanced"
+    CostCenter  = "IT"
+    Owner       = "Platform-Team"
+    Compliance  = "SOC2"
   }
 }

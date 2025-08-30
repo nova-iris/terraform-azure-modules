@@ -36,10 +36,10 @@ module "private_dns" {
   source = "../../"
 
   # Basic configuration
-  location                = azurerm_resource_group.example.location
-  resource_group_name     = azurerm_resource_group.example.name
-  create_resource_group   = false
-  private_dns_zone_name   = "example.internal"
+  location              = azurerm_resource_group.example.location
+  resource_group_name   = azurerm_resource_group.example.name
+  create_resource_group = false
+  private_dns_zone_name = "example.internal"
 
   # Virtual network links
   virtual_network_links = {

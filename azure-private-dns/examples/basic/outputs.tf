@@ -8,17 +8,17 @@ output "private_dns_zone_name" {
   value       = module.private_dns.private_dns_zone_name
 }
 
-output "virtual_network_links" {
-  description = "The virtual network links"
-  value       = module.private_dns.virtual_network_links
+output "virtual_network_link_ids" {
+  description = "The virtual network link IDs"
+  value       = module.private_dns.virtual_network_link_ids
 }
 
-output "a_records" {
-  description = "The A records created"
-  value       = module.private_dns.a_records
+output "a_record_ids" {
+  description = "The A record IDs created"
+  value       = module.private_dns.a_record_ids
 }
 
-output "cname_records" {
-  description = "The CNAME records created"
-  value       = module.private_dns.cname_records
+output "cname_record_ids" {
+  description = "The CNAME record IDs created"
+  value       = module.private_dns.cname_record_ids
 }

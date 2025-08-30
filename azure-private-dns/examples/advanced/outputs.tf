@@ -8,9 +8,9 @@ output "private_dns_zone_name" {
   value       = module.private_dns.private_dns_zone_name
 }
 
-output "virtual_network_links" {
-  description = "The virtual network links"
-  value       = module.private_dns.virtual_network_links
+output "virtual_network_link_ids" {
+  description = "The virtual network link IDs"
+  value       = module.private_dns.virtual_network_link_ids
 }
 
 output "dns_resolver_id" {
@@ -28,19 +28,19 @@ output "dns_resolver_outbound_endpoint_id" {
   value       = module.private_dns.dns_resolver_outbound_endpoint_id
 }
 
-output "dns_forwarding_rulesets" {
-  description = "The DNS forwarding rulesets"
-  value       = module.private_dns.dns_forwarding_rulesets
+output "dns_forwarding_ruleset_ids" {
+  description = "The DNS forwarding ruleset IDs"
+  value       = module.private_dns.dns_forwarding_ruleset_ids
 }
 
-output "all_dns_records" {
-  description = "All DNS records created"
+output "all_dns_record_ids" {
+  description = "All DNS record IDs created"
   value = {
-    a_records     = module.private_dns.a_records
-    aaaa_records  = module.private_dns.aaaa_records
-    cname_records = module.private_dns.cname_records
-    mx_records    = module.private_dns.mx_records
-    srv_records   = module.private_dns.srv_records
-    txt_records   = module.private_dns.txt_records
+    a_record_ids     = module.private_dns.a_record_ids
+    aaaa_record_ids  = module.private_dns.aaaa_record_ids
+    cname_record_ids = module.private_dns.cname_record_ids
+    mx_record_ids    = module.private_dns.mx_record_ids
+    srv_record_ids   = module.private_dns.srv_record_ids
+    txt_record_ids   = module.private_dns.txt_record_ids
   }
 }

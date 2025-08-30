@@ -176,6 +176,7 @@ module "private_dns_privatelink" {
 }
 ```
 
+<!-- BEGIN_TF_DOCS -->
 ## Requirements
 
 | Name | Version |
@@ -255,3 +256,4 @@ The `examples/` directory contains:
 ## License
 
 MIT License
+<!-- END_TF_DOCS -->

@@ -352,6 +352,7 @@ azure-vnet/
     └── hub-spoke/
 ```
 
+<!-- BEGIN_TF_DOCS -->
 ## Requirements
 
 | Name | Version |
@@ -453,3 +454,4 @@ See the `examples/` directory for complete usage examples:
 ## License
 
 This module is licensed under the MIT License. See LICENSE file for details.
+<!-- END_TF_DOCS -->

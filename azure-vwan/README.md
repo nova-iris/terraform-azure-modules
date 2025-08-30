@@ -448,6 +448,7 @@ azure-vwan/
     └── multi-hub/
 ```
 
+<!-- BEGIN_TF_DOCS -->
 ## Requirements
 
 | Name | Version |
@@ -583,5 +584,6 @@ This module is licensed under the MIT License. See LICENSE file for details.
 - [Virtual WAN Architecture Guide](https://docs.microsoft.com/en-us/azure/virtual-wan/virtual-wan-about)
 - [Azure Firewall in Virtual Hub](https://docs.microsoft.com/en-us/azure/firewall/deploy-multi-public-ip-powershell)
 - [Virtual WAN Pricing](https://azure.microsoft.com/en-us/pricing/details/virtual-wan/)
+<!-- END_TF_DOCS -->
 
 ````

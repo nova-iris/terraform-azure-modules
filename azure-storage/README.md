@@ -248,6 +248,7 @@ module "premium_storage" {
 }
 ```
 
+<!-- BEGIN_TF_DOCS -->
 ## Requirements
 
 | Name | Version |
@@ -372,3 +373,4 @@ This module is licensed under the MIT License. See [LICENSE](LICENSE) for detail
 ## Contributing
 
 Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for details.
+<!-- END_TF_DOCS -->

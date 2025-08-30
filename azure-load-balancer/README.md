@@ -361,6 +361,7 @@ module "standard_lb_outbound" {
 }
 ```
 
+<!-- BEGIN_TF_DOCS -->
 ## Requirements
 
 | Name | Version |
@@ -440,3 +441,4 @@ The `examples/` directory contains:
 ## License
 
 MIT License
+<!-- END_TF_DOCS -->

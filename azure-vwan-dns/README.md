@@ -205,6 +205,7 @@ This module is designed to work with other Azure modules:
 - `azure-firewall` - For DNS proxy functionality
 - `azure-vwan` - For Virtual WAN hub connectivity
 
+<!-- BEGIN_TF_DOCS -->
 ## Requirements
 
 | Name | Version |
@@ -415,3 +416,4 @@ See the `examples/` directory for complete implementation examples:
 ## License
 
 This module is licensed under the MIT License.
+<!-- END_TF_DOCS -->

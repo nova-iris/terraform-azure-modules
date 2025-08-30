@@ -1,0 +1,36 @@
+formatter: "markdown table"
+header-from: main.tf
+footer-from: ""
+recursive:
+  enabled: false
+sections:
+  hide: []
+  show: ["header", "requirements", "providers", "modules", "resources", "inputs", "outputs"]
+content: |-
+  {{ .Header }}
+  
+  ## Requirements
+  
+  {{ .Requirements }}
+  
+  ## Providers
+  
+  {{ .Providers }}
+  
+  {{ if .Modules -}}
+  ## Modules
+  
+  {{ .Modules }}
+  {{ end -}}
+  
+  ## Resources
+  
+  {{ .Resources }}
+  
+  ## Inputs
+  
+  {{ .Inputs }}
+  
+  ## Outputs
+  
+  {{ .Outputs }}

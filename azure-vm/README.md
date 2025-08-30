@@ -285,6 +285,7 @@ module "ha_vms" {
 }
 ```
 
+<!-- BEGIN_TF_DOCS -->
 ## Requirements
 
 | Name | Version |
@@ -366,3 +367,4 @@ The `examples/` directory contains:
 ## License
 
 MIT License
+<!-- END_TF_DOCS -->
